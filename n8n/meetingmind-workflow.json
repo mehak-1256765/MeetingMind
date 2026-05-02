@@ -1,0 +1,711 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeting-analyze",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9a4af4e8-4844-4a4b-b926-02e79bf082fd",
+      "name": "Webhook — Receive Transcript",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-480, 2320],
+      "webhookId": "f92fbff7-9963-449a-b3e7-2696fd997811"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.body.transcript }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "b121ebe5-1cc9-439f-822f-729bc2ced61e",
+      "name": "IF — Has Transcript?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-224, 2320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": false, \"error\": \"Transcript is required\" }",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "6fd9ad0b-c751-40ef-b5c7-0e4a34c836e1",
+      "name": "Respond — Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [-32, 2512]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "cond-provider",
+              "leftValue": "={{ $('Webhook — Receive Transcript').item.json.body.provider }}",
+              "rightValue": "mistral",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          }
+        },
+        "options": {}
+      },
+      "id": "1b51feee-a521-4e2e-a379-aad94b435b25",
+      "name": "IF — Mistral or Gemini?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [80, 2304]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are analyzing a meeting transcript. The transcript may come from Microsoft Teams, Zoom, Google Meet, or raw notes — it may include timestamps (like \"0:04\" or \"1 minute 22 seconds\"), repeated speaker names, or section labels. Ignore all formatting artifacts and focus only on the spoken content.\n\nReturn ONLY valid JSON — no markdown fences, no explanations, nothing before or after the JSON object.\n\nUse exactly this structure:\n{\n  \"summary\": \"2-3 sentence overview of what was discussed and any outcomes\",\n  \"decisions\": [\"decision 1\"],\n  \"action_items\": [\n    {\n      \"id\": 1,\n      \"task\": \"Specific actionable task\",\n      \"owner\": \"Person name (use Team if unclear)\",\n      \"priority\": \"MEDIUM\",\n      \"due\": \"date or timeframe, or Not specified\"\n    }\n  ],\n  \"email_subject\": \"Meeting Follow-up: [brief topic]\",\n  \"email_body\": \"Professional follow-up email\"\n}\n\nRules:\n- priority must be exactly HIGH, MEDIUM, or LOW\n- decisions and action_items must always be arrays — use [] if there are none\n- If no explicit action items are mentioned, infer reasonable follow-ups (e.g. add to WhatsApp group, schedule next call, send introduction, share documents)\n- Introductory or rapport-building meetings should still produce at least one implied action item\n\nTranscript:\n{{ $('Webhook — Receive Transcript').item.json.body.transcript }}",
+        "options": {
+          "systemMessage": "You are an expert meeting analyst. You handle all transcript formats including Microsoft Teams, Zoom, and Google Meet exports with timestamps and speaker labels. Always return ONLY valid JSON with no markdown fences."
+        }
+      },
+      "id": "3d3aa26e-6fcb-4037-87da-9855c9717037",
+      "name": "AI Agent — Gemini",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [320, 2048]
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 2000,
+          "temperature": 0.3
+        }
+      },
+      "id": "42467792-0972-4cbf-ba7b-53e04d7f7abd",
+      "name": "Gemini — gemini-1.5-flash",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [304, 2240],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "AfQGxTOAMSRyVHqU",
+          "name": "Google Gemini(PaLM) Api account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are analyzing a meeting transcript. The transcript may come from Microsoft Teams, Zoom, Google Meet, or raw notes — it may include timestamps (like \"0:04\" or \"1 minute 22 seconds\"), repeated speaker names, or section labels. Ignore all formatting artifacts and focus only on the spoken content.\n\nReturn ONLY valid JSON — no markdown fences, no explanations, nothing before or after the JSON object.\n\nUse exactly this structure:\n{\n  \"summary\": \"2-3 sentence overview of what was discussed and any outcomes\",\n  \"decisions\": [\"decision 1\"],\n  \"action_items\": [\n    {\n      \"id\": 1,\n      \"task\": \"Specific actionable task\",\n      \"owner\": \"Person name (use Team if unclear)\",\n      \"priority\": \"MEDIUM\",\n      \"due\": \"date or timeframe, or Not specified\"\n    }\n  ],\n  \"email_subject\": \"Meeting Follow-up: [brief topic]\",\n  \"email_body\": \"Professional follow-up email\"\n}\n\nRules:\n- priority must be exactly HIGH, MEDIUM, or LOW\n- decisions and action_items must always be arrays — use [] if there are none\n- If no explicit action items are mentioned, infer reasonable follow-ups (e.g. add to WhatsApp group, schedule next call, send introduction, share documents)\n- Introductory or rapport-building meetings should still produce at least one implied action item\n\nTranscript:\n{{ $('Webhook — Receive Transcript').item.json.body.transcript }}",
+        "options": {
+          "systemMessage": "You are an expert meeting analyst. You handle all transcript formats including Microsoft Teams, Zoom, and Google Meet exports with timestamps and speaker labels. Always return ONLY valid JSON with no markdown fences."
+        }
+      },
+      "id": "e4037eee-ccba-4de2-93a9-5a4f4c70d583",
+      "name": "AI Agent — Mistral",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [320, 2432]
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-latest",
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.3
+        }
+      },
+      "id": "05e021da-4b1b-482e-9fff-3b4a6a40b953",
+      "name": "Mistral — mistral-small-latest",
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [240, 2624],
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "1Mbly9UTHYNV9HQl",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const provider = $('Webhook — Receive Transcript').item.json.body.provider || 'gemini';\n\nlet rawText = '';\ntry {\n  if (provider === 'mistral') {\n    rawText = $('AI Agent — Mistral').item.json.output;\n  } else {\n    rawText = $('AI Agent — Gemini').item.json.output;\n  }\n} catch(e) {\n  return { json: { success: false, error: 'Could not read agent output: ' + e.message } };\n}\n\nif (!rawText || !rawText.trim()) {\n  return { json: { success: false, error: 'AI agent returned empty output' } };\n}\n\nconst clean = rawText.replace(/```json\\n?|```\\n?/g, '').trim();\nconst jsonMatch = clean.match(/\\{[\\s\\S]*\\}/);\nif (!jsonMatch) {\n  return { json: { success: false, error: 'No JSON found in response', raw: rawText.substring(0, 300) } };\n}\n\n// Fix common AI JSON mistakes: trailing commas, comments\nconst fixedJson = jsonMatch[0]\n  .replace(/,\\s*([}\\]])/g, '$1')\n  .replace(/\\/\\/[^\\n]*/g, '')\n  .replace(/\\/\\*[\\s\\S]*?\\*\\//g, '');\n\nlet result;\ntry {\n  result = JSON.parse(fixedJson);\n} catch(e) {\n  return { json: { success: false, error: 'JSON parse failed: ' + e.message, raw: rawText.substring(0, 300) } };\n}\n\nif (!Array.isArray(result.action_items)) result.action_items = [];\nif (!Array.isArray(result.decisions)) result.decisions = [];\nif (!result.summary) result.summary = 'Meeting summary not available.';\nif (!result.email_subject) result.email_subject = 'Meeting Follow-up';\nif (!result.email_body) result.email_body = '';\n\nresult.action_items = result.action_items.map((item, i) => ({\n  ...item,\n  id: item.id ?? i + 1,\n  priority: ['HIGH', 'MEDIUM', 'LOW'].includes(item.priority) ? item.priority : 'MEDIUM',\n  due: item.due || 'Not specified',\n  owner: item.owner || 'Team',\n}));\n\nresult.meeting_id = 'mtg_' + Date.now();\nresult.provider = provider;\nresult.analyzed_at = new Date().toISOString();\n\nreturn { json: { success: true, data: result } };"
+      },
+      "id": "53acefb2-4ba1-41dd-9682-b1d40d3dc5b3",
+      "name": "Code — Parse Agent Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 2256]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\nif (!input.success || !input.data) {\n  return { json: input };\n}\n\nconst result = input.data;\nconst items = result.action_items || [];\nconst decisions = result.decisions || [];\n\nconst ownedItems = items.filter(i => i.owner && i.owner !== 'Team').length;\nconst datedItems = items.filter(i => i.due && i.due !== 'Not specified').length;\nconst highItems = items.filter(i => i.priority === 'HIGH').length;\n\nlet score = 0;\nscore += Math.min(items.length * 8, 30);\nscore += Math.min(decisions.length * 10, 20);\nscore += Math.min(ownedItems * 6, 30);\nscore += Math.min(datedItems * 5, 20);\nscore = Math.min(score, 100);\n\nconst grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : 'D';\nconst score_label = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Needs Improvement';\n\nreturn {\n  json: {\n    success: true,\n    data: {\n      ...result,\n      score,\n      grade,\n      score_label,\n      high_priority_count: highItems\n    }\n  }\n};"
+      },
+      "id": "a32def03-bc41-4936-83d5-9d3493337582",
+      "name": "Code — Score Meeting",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [976, 2256]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json.data;\nreturn {\n  json: {\n    meeting_id: d.meeting_id,\n    date: new Date(d.analyzed_at).toLocaleString('en-GB'),\n    provider: d.provider,\n    summary: d.summary,\n    decisions: (d.decisions || []).join(' | '),\n    items_count: d.action_items.length,\n    high_priority: d.action_items.filter(i => i.priority === 'HIGH').length,\n    owners: [...new Set(d.action_items.map(i => i.owner))].join(', '),\n    score: d.score,\n    grade: d.grade,\n    items_json: JSON.stringify(d.action_items)\n  }\n};"
+      },
+      "id": "abef8c4d-b65b-4c01-b39a-3a3b6bf9c606",
+      "name": "Code — Flatten for Sheets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1408, 1984],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "create",
+        "documentId": {
+          "__rl": true,
+          "value": "1nTC9k9L74lR8H47nifj7OOyUCeGt7s0gd84uM_a8oAA",
+          "mode": "id"
+        },
+        "title": "Meetings",
+        "options": {}
+      },
+      "id": "gsheets-create-tab-001",
+      "name": "Google Sheets — Create Meetings Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1560, 1840],
+      "continueOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7ESxHHW2s4SSyOY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1nTC9k9L74lR8H47nifj7OOyUCeGt7s0gd84uM_a8oAA",
+          "mode": "list",
+          "cachedResultName": "Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nTC9k9L74lR8H47nifj7OOyUCeGt7s0gd84uM_a8oAA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Meetings",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "786cd077-101c-45b9-a6d6-2a344b6cd382",
+      "name": "Google Sheets — Log Meeting",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1712, 1984],
+      "continueOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7ESxHHW2s4SSyOY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "81ffe11e-b123-4195-b472-5289dc0f1220",
+      "name": "Respond — Return to Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1408, 2400]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meeting-send-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "030b3a16-cdad-44e8-95c3-ea284b760df2",
+      "name": "Webhook — Send Email",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-240, 2816],
+      "webhookId": "9e996349-20fd-4204-8d7d-938eea66390f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst items = body.approved_items || [];\n\nlet emailBody;\nif (body.body && body.body.trim()) {\n  // Use the HTML body built by the frontend\n  emailBody = body.body.trim();\n} else {\n  // Fallback: generate HTML when frontend body is missing\n  const priorityStyle = (p) =>\n    p === 'HIGH'   ? 'background:#fee2e2;color:#dc2626;' :\n    p === 'MEDIUM' ? 'background:#fef3c7;color:#d97706;' :\n                     'background:#d1fae5;color:#059669;';\n  const itemsHtml = items.map((item, i) => `\n    <div style=\"border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:10px 0;\">\n      <p style=\"font-weight:700;font-size:14px;margin:0 0 8px;color:#111827;\">${i+1}. ${item.task}</p>\n      <span style=\"display:inline-block;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700;${priorityStyle(item.priority)}\">${item.priority}</span>\n      &nbsp;<span style=\"font-size:12px;color:#6b7280;\">Owner: <strong>${item.owner}</strong> &nbsp;·&nbsp; Due: ${item.due}</span>\n    </div>`).join('');\n  emailBody = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head>\n<body style=\"margin:0;padding:24px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;\">\n<div style=\"max-width:620px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);\">\n  <div style=\"background:linear-gradient(135deg,#4f46e5,#0ea5e9);padding:28px 32px;\">\n    <h1 style=\"margin:0;font-size:22px;font-weight:800;color:#fff;\">Meeting Follow-up</h1>\n    <p style=\"margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.8);\">Action Items &amp; MOM</p>\n  </div>\n  <div style=\"padding:28px 32px;\">\n    <p style=\"font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af;margin:0 0 14px;\">Action Items</p>\n    ${itemsHtml}\n  </div>\n  <div style=\"padding:16px 32px;background:#f9fafb;border-top:1px solid #f3f4f6;text-align:center;\">\n    <p style=\"font-size:12px;color:#6b7280;margin:0;\">Please update your progress before the next check-in.</p>\n    <p style=\"font-size:11px;color:#9ca3af;margin:4px 0 0;\">Sent via MeetingMind</p>\n  </div>\n</div></body></html>`;\n}\n\nreturn {\n  json: {\n    to: body.to || 'team@company.com',\n    cc: body.cc || '',\n    subject: body.subject || 'Meeting Follow-up — Action Items',\n    message: emailBody,\n    item_count: items.length\n  }\n};"
+      },
+      "id": "b5ebcb5f-8b41-4702-b52e-421515e3e444",
+      "name": "Code — Build Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-32, 2816]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.message }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d5b22371-988c-4d59-9df3-cb89e6747bb3",
+      "name": "Gmail — Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [192, 2816],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xcy1WxG4D8Mhr22J",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Email sent via Gmail!\", \"item_count\": {{ $('Code — Build Email').item.json.item_count }} }",
+        "options": {}
+      },
+      "id": "be179b44-6403-4bf0-a478-c0d8f7f8ee33",
+      "name": "Respond — Email Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [640, 2672]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook — Send Email').item.json.body;\nconst items = body.approved_items || [];\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst events = items\n  .filter(item => item.due && item.due !== 'Not specified')\n  .map(item => {\n    let eventDate = new Date(today);\n    const due = item.due.toLowerCase();\n\n    if (due.includes('today') || due.includes('eod')) {\n      // keep today\n    } else if (due.includes('tomorrow')) {\n      eventDate.setDate(today.getDate() + 1);\n    } else if (due.includes('monday')) {\n      const d = today.getDay(), diff = (1 + 7 - d) % 7 || 7;\n      eventDate.setDate(today.getDate() + diff);\n    } else if (due.includes('tuesday')) {\n      const d = today.getDay(), diff = (2 + 7 - d) % 7 || 7;\n      eventDate.setDate(today.getDate() + diff);\n    } else if (due.includes('wednesday')) {\n      const d = today.getDay(), diff = (3 + 7 - d) % 7 || 7;\n      eventDate.setDate(today.getDate() + diff);\n    } else if (due.includes('thursday')) {\n      const d = today.getDay(), diff = (4 + 7 - d) % 7 || 7;\n      eventDate.setDate(today.getDate() + diff);\n    } else if (due.includes('friday')) {\n      const d = today.getDay(), diff = (5 + 7 - d) % 7 || 7;\n      eventDate.setDate(today.getDate() + diff);\n    } else {\n      eventDate.setDate(today.getDate() + 3);\n    }\n\n    eventDate.setHours(9, 0, 0, 0);\n    const endDate = new Date(eventDate);\n    endDate.setHours(9, 30, 0, 0);\n\n    return {\n      json: {\n        title: `[${item.priority}] ${item.task}`,\n        description: `Owner: ${item.owner}\\nDue: ${item.due}\\nPriority: ${item.priority}\\n\\nCreated by MeetingMind`,\n        start: eventDate.toISOString(),\n        end: endDate.toISOString()\n      }\n    };\n  });\n\nreturn events;"
+      },
+      "id": "0ea7a325-52a8-4a69-a936-ffa03becfc4d",
+      "name": "Code — Prep Calendar Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 2944]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "mehakmanhas19@gmail.com",
+          "mode": "list",
+          "cachedResultName": "mehakmanhas19@gmail.com"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ $json.end }}",
+        "additionalFields": {
+          "description": "={{ $json.description }}",
+          "summary": "={{ $json.title }}"
+        }
+      },
+      "id": "7c17519b-b07c-4fdb-943b-7069a2a290b0",
+      "name": "Google Calendar — Create Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [864, 2944],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "WEx0oDuacwD86z7Q",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 8 * * 1-5" }]
+        }
+      },
+      "id": "rem-sched-001",
+      "name": "Schedule — Every Weekday 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [-480, 3500]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1nTC9k9L74lR8H47nifj7OOyUCeGt7s0gd84uM_a8oAA"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Meetings"
+        },
+        "options": {}
+      },
+      "id": "rem-sheets-001",
+      "name": "Google Sheets — Read Meetings",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [-256, 3500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "k7ESxHHW2s4SSyOY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\n\nconst dueToday = [];\nconst dueTomorrow = [];\n\nfor (const row of rows) {\n  const itemsJson = row.json['items_json'];\n  if (!itemsJson) continue;\n  try {\n    const items = JSON.parse(itemsJson);\n    for (const item of items) {\n      if (!item.due || item.due === 'Not specified') continue;\n      const due = item.due.toLowerCase();\n      const entry = { task: item.task, owner: item.owner, priority: item.priority, due: item.due };\n      if (due.includes('today') || due.includes('eod')) {\n        dueToday.push(entry);\n      } else if (due.includes('tomorrow')) {\n        dueTomorrow.push(entry);\n      }\n    }\n  } catch(e) { /* skip malformed rows */ }\n}\n\nconst allDue = [...dueToday, ...dueTomorrow];\nreturn [{ json: { has_due: allDue.length > 0, due_today: dueToday, due_tomorrow: dueTomorrow, count: allDue.length } }];"
+      },
+      "id": "rem-code-001",
+      "name": "Code — Find Due Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-32, 3500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "rem-cond-1",
+              "leftValue": "={{ $json.has_due }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and",
+          "options": {}
+        },
+        "options": {}
+      },
+      "id": "rem-if-001",
+      "name": "IF — Any Due Today or Tomorrow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [192, 3500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { due_today, due_tomorrow } = $json;\n\nconst priorityStyle = (p) =>\n  p === 'HIGH'   ? 'background:#fee2e2;color:#dc2626;' :\n  p === 'MEDIUM' ? 'background:#fef3c7;color:#d97706;' :\n                   'background:#d1fae5;color:#059669;';\n\nconst buildSection = (items, heading, borderColor) => {\n  if (!items.length) return '';\n  const rows = items.map(item =>\n    `<tr>\n      <td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:14px;color:#111827;font-weight:500;\">${item.task}</td>\n      <td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#6b7280;white-space:nowrap;\">${item.owner}</td>\n      <td style=\"padding:10px 12px;border-bottom:1px solid #f3f4f6;\"><span style=\"padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700;${priorityStyle(item.priority)}\">${item.priority}</span></td>\n    </tr>`\n  ).join('');\n  return `\n    <div style=\"margin-bottom:24px;\">\n      <div style=\"border-left:3px solid ${borderColor};padding-left:12px;margin-bottom:12px;\">\n        <p style=\"font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;margin:0;\">${heading}</p>\n      </div>\n      <table style=\"width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;\">\n        <thead><tr style=\"background:#f9fafb;\">\n          <th style=\"text-align:left;padding:8px 12px;font-size:11px;color:#6b7280;font-weight:600;\">Task</th>\n          <th style=\"text-align:left;padding:8px 12px;font-size:11px;color:#6b7280;font-weight:600;\">Owner</th>\n          <th style=\"text-align:left;padding:8px 12px;font-size:11px;color:#6b7280;font-weight:600;\">Priority</th>\n        </tr></thead>\n        <tbody>${rows}</tbody>\n      </table>\n    </div>`;\n};\n\nconst todaySection    = buildSection(due_today,    'Due Today',    '#ef4444');\nconst tomorrowSection = buildSection(due_tomorrow, 'Due Tomorrow', '#f59e0b');\nconst todayStr = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });\n\nconst html = `<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head>\n<body style=\"margin:0;padding:24px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;\">\n<div style=\"max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);\">\n  <div style=\"background:linear-gradient(135deg,#f59e0b,#ef4444);padding:28px 32px;\">\n    <h1 style=\"margin:0;font-size:20px;font-weight:800;color:#fff;\">&#9200; Action Items Due Soon</h1>\n    <p style=\"margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.85);\">${todayStr}</p>\n  </div>\n  <div style=\"padding:28px 32px;\">\n    <p style=\"font-size:14px;color:#374151;margin:0 0 20px;\">Hi team, this is your daily MeetingMind reminder. The following action items need attention:</p>\n    ${todaySection}${tomorrowSection}\n  </div>\n  <div style=\"padding:16px 32px;background:#f9fafb;border-top:1px solid #f3f4f6;text-align:center;\">\n    <p style=\"font-size:12px;color:#6b7280;margin:0;\">Please ensure these are completed on time.</p>\n    <p style=\"font-size:11px;color:#9ca3af;margin:4px 0 0;\">Sent automatically by MeetingMind</p>\n  </div>\n</div></body></html>`;\n\nconst subject = `&#9200; MeetingMind Reminder \\u2014 ${$json.count} item(s) due soon (${todayStr})`;\nreturn [{ json: { subject, html } }];"
+      },
+      "id": "rem-code-002",
+      "name": "Code — Format Reminder Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [416, 3500]
+    },
+    {
+      "parameters": {
+        "sendTo": "mehak@dsightsonline.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": { "appendAttribution": false }
+      },
+      "id": "rem-gmail-001",
+      "name": "Gmail — Send Daily Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [640, 3500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xcy1WxG4D8Mhr22J",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook — Receive Transcript": {
+      "main": [
+        [
+          {
+            "node": "IF — Has Transcript?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Has Transcript?": {
+      "main": [
+        [
+          {
+            "node": "IF — Mistral or Gemini?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond — Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Mistral or Gemini?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent — Mistral",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent — Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent — Gemini": {
+      "main": [
+        [
+          {
+            "node": "Code — Parse Agent Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini — gemini-1.5-flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent — Gemini",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent — Mistral": {
+      "main": [
+        [
+          {
+            "node": "Code — Parse Agent Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral — mistral-small-latest": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent — Mistral",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Parse Agent Output": {
+      "main": [
+        [
+          {
+            "node": "Code — Score Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Score Meeting": {
+      "main": [
+        [
+          {
+            "node": "Respond — Return to Frontend",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code — Flatten for Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Flatten for Sheets": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Create Meetings Tab",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets — Log Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook — Send Email": {
+      "main": [
+        [
+          {
+            "node": "Code — Build Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Build Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail — Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond — Email Sent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code — Prep Calendar Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Prep Calendar Events": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar — Create Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule — Every Weekday 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Read Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets — Read Meetings": {
+      "main": [
+        [
+          {
+            "node": "Code — Find Due Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code — Find Due Items": {
+      "main": [
+        [
+          {
+            "node": "IF — Any Due Today or Tomorrow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Any Due Today or Tomorrow?": {
+      "main": [
+        [
+          {
+            "node": "Code — Format Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code — Format Reminder Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail — Send Daily Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7ea4dd7fb428c4c556b2c41f4e82db7c20f76486cff2de2d29a9516001c16821"
+  }
+}
